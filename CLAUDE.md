@@ -2,7 +2,7 @@
 
 ## Environment
 
-Claude Code is running inside a Docker container. The container does not have the host's toolchain or QEMU installed. If I need to check whether a tool exists or get environment details, I will ask the user to run the relevant command on their host machine and paste the output.
+Claude Code CLI runs inside a Docker container, but that is the only thing in the container. All development tooling — the RISC-V cross-compiler, linker, QEMU, and GDB — runs on the host machine. The project directory is mounted into the container so Claude can read and edit files. If I need to check whether a tool exists or get environment details, I will ask the user to run the relevant command on their host machine and paste the output.
 
 ## About this project
 
