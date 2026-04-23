@@ -3,7 +3,7 @@ CC     = $(CROSS)gcc
 LD     = $(CROSS)ld
 GDB    = $(CROSS)gdb
 
-CFLAGS = -march=rv64gc -mabi=lp64d -ffreestanding -nostdlib -O0 -g
+CFLAGS = -march=rv64gc -mabi=lp64d -ffreestanding -nostdlib -O0 -g -mcmodel=medany
 LFLAGS = -T kernel.ld
 
 OBJS   = boot.o kernel.o
