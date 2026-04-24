@@ -1,6 +1,6 @@
 void print(char *string)
 {
-    volatile char *uart = (volatile char *)0x10000000;;
+    volatile char *uart = (volatile char *)0x10000000;
 
     while ((*uart = *string++) != '\0') {
         ;
