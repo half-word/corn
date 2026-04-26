@@ -23,11 +23,12 @@ SECTIONS
          * is not 8-byte aligned. ALIGN(8) after the contents ensures __bss_end
          * is also aligned, so the total BSS size is a multiple of 8 and the
          * loop always terminates on an aligned boundary. */
-        ALIGN(8);
+        . = ALIGN(8);
         __bss_start = .;
         *(.bss .bss.*)
+        *(.sbss .sbss.*)
         *(COMMON)
-        ALIGN(8);
+        . = ALIGN(8);
         __bss_end = .;
     }
 
