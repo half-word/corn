@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 #define UART_RECEIVER_REGISTER 0x10000000
 
 /* TODO: compare agains standard implementation */
@@ -42,13 +44,13 @@ void print(char *string)
  * r - remainder
  * x = q * 16  + r
  */
-void print_hex_recurse(unsigned int integer)
+void print_hex_recurse(uint64_t integer)
 {
     if (integer == 0) {
         return;
     }
 
-    int quotient, remainder;
+    uint64_t quotient, remainder;
 
     quotient = integer / 16;
     remainder = integer % 16;
@@ -61,7 +63,7 @@ void print_hex_recurse(unsigned int integer)
         print_char(remainder + 'W'); /* W is the ASCII distance (87) to 'a' */
 }
 
-void print_hex(unsigned int integer)
+void print_hex(uint64_t integer)
 {
     if (integer == 0) {
         print("0x0");
@@ -72,8 +74,12 @@ void print_hex(unsigned int integer)
 }
 
 void kernel_main(void) {
-    print("Hello from Valos\n");
-    print_hex(0);
+    uint64_t misa;
+    __asm__ volatile ("csrr %0, misa" : "=r"(misa));
+
+    print("misa: ");
+    print_hex(misa);
+    print("\n");
 
     for (;;) {}
 }
