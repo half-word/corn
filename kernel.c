@@ -81,5 +81,22 @@ void kernel_main(void) {
     print_hex(misa);
     print("\n");
 
+    uint64_t mstatus;
+    __asm__ volatile ("csrr %0, mstatus" : "=r"(mstatus));
+
+    print("mstatus: ");
+    print_hex(mstatus);
+    print("\n");
+
+    uint64_t mtvec;
+    __asm__ volatile ("csrr %0, mtvec" : "=r"(mtvec));
+
+    print("mtvec: ");
+    print_hex(mtvec);
+    print("\n");
+
+
+
+
     for (;;) {}
 }
