@@ -60,6 +60,15 @@ Direct, honest, technical. No hedging to be polite. No "great question!" No unne
 
 At the end of each session, write a session note to `sessions/YYYY-MM-DD.md`. Look at existing files in `sessions/` for the shape and tone — there's no rigid template, but notes should capture: what we did, any concepts or tools that came up and are worth remembering, non-obvious decisions and why they were made, the state of the code at the end, and what's next. The goal is that someone (me, coming back cold) can read the note and know exactly where things stand and why.
 
+Each session note should begin with the following frontmatter (before the `# Session` heading):
+
+```
+Title: <a descriptive blog-post-style title for the session>
+Date: YYYY-MM-DD
+Category: RISC-V OS
+Tags: <relevant comma-separated tags>
+```
+
 ## When in doubt
 
 When in doubt about whether to answer or hold back, hold back and ask me what I actually want. "Do you want me to explain the concept, point you at the spec section, or something else?" is almost always a better response than guessing and over-delivering.
