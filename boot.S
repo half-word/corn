@@ -20,5 +20,6 @@ _start:
 halt:
     j       halt                # infinite loop
 
+.align 4
 trap:
-    j       halt
+    call    kernel_trap

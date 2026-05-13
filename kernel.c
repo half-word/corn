@@ -74,6 +74,10 @@ void print_hex(uint64_t integer)
 }
 
 void kernel_main(void) {
+    // NULL is address 0x0000000000000000
+    int *p = 0;
+    *p = 42;
+
     uint64_t misa;
     __asm__ volatile ("csrr %0, misa" : "=r"(misa));
 
@@ -97,6 +101,31 @@ void kernel_main(void) {
 
 
 
+
+    for (;;) {}
+}
+
+void kernel_trap()
+{
+    print("Oh no!\n");
+
+    uint64_t mcause;
+    __asm__ volatile ("csrr %0, mcause" : "=r"(mcause));
+
+    print("mcause: ");
+    print_hex(mcause);
+    print("\n");
+
+    uint64_t interrupt = mcause >> 63;
+    uint64_t exception_code = mcause & ~(1ULL << 63);
+
+    print("interrupt: ");
+    print_hex(interrupt);
+    print("\n");
+
+    print("exception_code: ");
+    print_hex(exception_code);
+    print("\n");
 
     for (;;) {}
 }
