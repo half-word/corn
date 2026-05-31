@@ -1,6 +1,44 @@
 #include <stdint.h>
 
-#define UART_RECEIVER_REGISTER 0x10000000
+#define UART_RECEIVER_REGISTER      0x10000000
+#define MTIME_ADDRESS               0x200bff8
+#define MTIMECMP_0_ADDRESS          0x2004000
+#define MACHINE_TIMER_INTERUPT_CODE  7
+#define IS_INTERRUPT                1
+
+struct saved_registers {
+    uint64_t ra;
+    uint64_t sp;
+    uint64_t gp;
+    uint64_t tp;
+    uint64_t t0;
+    uint64_t t1;
+    uint64_t t2;
+    uint64_t s0;
+    uint64_t s1;
+    uint64_t a0;
+    uint64_t a1;
+    uint64_t a2;
+    uint64_t a3;
+    uint64_t a4;
+    uint64_t a5;
+    uint64_t a6;
+    uint64_t a7;
+    uint64_t s2;
+    uint64_t s3;
+    uint64_t s4;
+    uint64_t s5;
+    uint64_t s6;
+    uint64_t s7;
+    uint64_t s8;
+    uint64_t s9;
+    uint64_t s10;
+    uint64_t s11;
+    uint64_t t3;
+    uint64_t t4;
+    uint64_t t5;
+    uint64_t t6;
+};
 
 /* TODO: compare agains standard implementation */
 int string_length(char *string)
@@ -73,10 +111,33 @@ void print_hex(uint64_t integer)
     print_hex_recurse(integer);
 }
 
+void set_interrupt()
+{
+    // volatile uint64_t *mtime = (volatile uint64_t *)MTIME_ADDRESS;
+    volatile uint64_t *mtime_cmp = (volatile uint64_t *)MTIMECMP_0_ADDRESS;
+    *mtime_cmp = *mtime_cmp + 10000000;
+}
+
+void enable_interrupts()
+{
+    set_interrupt();
+
+    /* enable mstatus.MIE */
+    // char mie_mask = 1 << 3;
+    __asm__ volatile ("csrrsi zero, mstatus, %0" :: "i"(1 << 3));
+
+    /* enable MIE.MTIE */
+    uint64_t mtime_mask = 1 << 7;
+    __asm__ volatile ("csrrs zero, mie, %0" :: "r"(mtime_mask));
+}
+
+
+
 void kernel_main(void) {
     // NULL is address 0x0000000000000000
-    int *p = 0;
-    *p = 42;
+    // int *p = 0;
+    // *p = 42;
+    enable_interrupts();
 
     uint64_t misa;
     __asm__ volatile ("csrr %0, misa" : "=r"(misa));
@@ -105,9 +166,11 @@ void kernel_main(void) {
     for (;;) {}
 }
 
-void kernel_trap()
+void kernel_trap(struct saved_registers *frame)
 {
-    print("Oh no!\n");
+    // print("t1: ");
+    // print_hex(frame->t1);
+    // print("\n");
 
     uint64_t mcause;
     __asm__ volatile ("csrr %0, mcause" : "=r"(mcause));
@@ -119,6 +182,13 @@ void kernel_trap()
     uint64_t interrupt = mcause >> 63;
     uint64_t exception_code = mcause & ~(1ULL << 63);
 
+    if (interrupt == IS_INTERRUPT && exception_code == MACHINE_TIMER_INTERUPT_CODE) {
+        print("TIMER!\n");
+        set_interrupt();
+        return;
+    }
+
+    print("Oh no!\n");
     print("interrupt: ");
     print_hex(interrupt);
     print("\n");
@@ -127,5 +197,23 @@ void kernel_trap()
     print_hex(exception_code);
     print("\n");
 
-    for (;;) {}
+    uint64_t mepc;
+    __asm__ volatile ("csrr %0, mepc" : "=r"(mepc));
+
+    print("mepc: ");
+    print_hex(mepc);
+    print("\n");
+
+    uint64_t mtval;
+    __asm__ volatile ("csrr %0, mtval" : "=r"(mtval));
+
+    print("mtval: ");
+    print_hex(mtval);
+    print("\n");
+
+    mepc = mepc + 4;
+
+    __asm__ volatile ("csrw mepc, %0" :: "r"(mepc));
+
+    return;
 }
