@@ -2,3 +2,4 @@ kernel.elf
 boot.o
 kernel.o
 kernel.objdump
+.claude/
