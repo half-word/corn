@@ -1,10 +1,13 @@
 #include <stdint.h>
 
-#define UART_RECEIVER_REGISTER      0x10000000
-#define MTIME_ADDRESS               0x200bff8
-#define MTIMECMP_0_ADDRESS          0x2004000
-#define MACHINE_TIMER_INTERUPT_CODE  7
-#define IS_INTERRUPT                1
+#define UART_TRANSMITTER_REGISTER           0x10000000
+#define MTIME_ADDRESS                       0x200bff8
+#define MTIMECMP_0_ADDRESS                  0x2004000
+#define MACHINE_TIMER_INTERUPT_CODE         7
+#define IS_INTERRUPT                        1
+#define TICK_RATE                           1000000 /* CLINT ticks at 10MHz (qemu virt) */
+
+volatile uint64_t tick_counter = 0;
 
 struct saved_registers {
     uint64_t ra;
@@ -64,7 +67,7 @@ void string_reverse(char *string)
 
 void print_char(char c)
 {
-    volatile char *uart = (volatile char *)UART_RECEIVER_REGISTER;
+    volatile char *uart = (volatile char *)UART_TRANSMITTER_REGISTER;
     *uart = c;
 }
 
@@ -76,12 +79,9 @@ void print(char *string)
     }
 }
 
-/*
- * x - decimal number
- * q - quotient
- * r - remainder
- * x = q * 16  + r
- */
+/* Recursion naturally produces digits high-to-low: we divide down to the most
+ * significant nibble before printing anything, so digits come out in the right
+ * order on the way back up. No buffer or reversal needed. */
 void print_hex_recurse(uint64_t integer)
 {
     if (integer == 0) {
@@ -98,7 +98,7 @@ void print_hex_recurse(uint64_t integer)
     if (remainder <= 9)
         print_char(remainder + '0');
     else
-        print_char(remainder + 'W'); /* W is the ASCII distance (87) to 'a' */
+        print_char(remainder - 10 + 'a'); /* remainder is 10..15; 'a' is 97 */
 }
 
 void print_hex(uint64_t integer)
@@ -111,16 +111,16 @@ void print_hex(uint64_t integer)
     print_hex_recurse(integer);
 }
 
-void set_interrupt()
+void arm_timer()
 {
     // volatile uint64_t *mtime = (volatile uint64_t *)MTIME_ADDRESS;
     volatile uint64_t *mtime_cmp = (volatile uint64_t *)MTIMECMP_0_ADDRESS;
-    *mtime_cmp = *mtime_cmp + 10000000;
+    *mtime_cmp = *mtime_cmp + TICK_RATE;
 }
 
 void enable_interrupts()
 {
-    set_interrupt();
+    arm_timer();
 
     /* enable mstatus.MIE */
     // char mie_mask = 1 << 3;
@@ -131,64 +131,92 @@ void enable_interrupts()
     __asm__ volatile ("csrrs zero, mie, %0" :: "r"(mtime_mask));
 }
 
+void print_logo()
+{
+    char *logo =
+    "   _________  _________ \n"
+    "  / ___/ __ \\/ ___/ __ \\\n"
+    " / /__/ /_/ / /  / / / /\n"
+    " \\___/\\____/_/  /_/ /_/ \n";
+    print(logo);
+    print("-------------------------\n");
+}
 
-
-void kernel_main(void) {
-    // NULL is address 0x0000000000000000
-    // int *p = 0;
-    // *p = 42;
-    enable_interrupts();
-
+void print_misa()
+{
     uint64_t misa;
     __asm__ volatile ("csrr %0, misa" : "=r"(misa));
 
     print("misa: ");
     print_hex(misa);
     print("\n");
+}
 
-    uint64_t mstatus;
-    __asm__ volatile ("csrr %0, mstatus" : "=r"(mstatus));
-
-    print("mstatus: ");
-    print_hex(mstatus);
+void bar()
+{
+    int a = 909090;
+    print("bar: ");
+    print_hex((uint64_t)&a);
     print("\n");
 
-    uint64_t mtvec;
-    __asm__ volatile ("csrr %0, mtvec" : "=r"(mtvec));
-
-    print("mtvec: ");
-    print_hex(mtvec);
+    uint64_t sp;
+    __asm__ volatile ("mv %0, sp" : "=r"(sp));
+    print("sp (bar): ");
+    print_hex(sp);
     print("\n");
+}
 
+void foo()
+{
+    int z = 404040;
+    print("foo: ");
+    print_hex((uint64_t)&z);
+    print("\n");
+    bar();
+}
 
+void kernel_main(void) {
+    print_logo();
+    enable_interrupts();
 
+    foo();
+
+    uint64_t sp;
+    __asm__ volatile ("mv %0, sp" : "=r"(sp));
+    print("sp: ");
+    print_hex(sp);
+    print("\n");
 
     for (;;) {}
 }
 
 void kernel_trap(struct saved_registers *frame)
 {
-    // print("t1: ");
-    // print_hex(frame->t1);
-    // print("\n");
+    print("frame: ");
+    print_hex((uint64_t)frame);
+    print("\n");
 
     uint64_t mcause;
     __asm__ volatile ("csrr %0, mcause" : "=r"(mcause));
-
-    print("mcause: ");
-    print_hex(mcause);
-    print("\n");
 
     uint64_t interrupt = mcause >> 63;
     uint64_t exception_code = mcause & ~(1ULL << 63);
 
     if (interrupt == IS_INTERRUPT && exception_code == MACHINE_TIMER_INTERUPT_CODE) {
-        print("TIMER!\n");
-        set_interrupt();
+        // print("TIMER!\n");
+
+        tick_counter += 1;
+
+        arm_timer();
         return;
     }
 
     print("Oh no!\n");
+
+    print("mcause: ");
+    print_hex(mcause);
+    print("\n");
+
     print("interrupt: ");
     print_hex(interrupt);
     print("\n");

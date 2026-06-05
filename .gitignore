@@ -1,4 +1,4 @@
 kernel.elf
-kernel.ld
 boot.o
 kernel.o
+kernel.objdump

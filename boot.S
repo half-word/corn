@@ -22,8 +22,11 @@ halt:
 
 .align 4
 trap:
-    sd      sp, -240(sp)          # save sp on the stack before we allocate space
-    addi    sp, sp, -248        # allocate space for all general purpose registers except zero
+    # sp must be saved before we move it, so we pre-save it at the slot it will
+    # occupy once the frame is allocated. sp's slot is offset 8 in the frame, so
+    # its pre-allocation address is: old_sp - 248 + 8 = old_sp - 240.
+    sd      sp, -240(sp)
+    addi    sp, sp, -248        # allocate frame: 31 registers × 8 bytes
     sd      ra, 0(sp)
     sd      gp, 16(sp)
     sd      tp, 24(sp)
